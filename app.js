@@ -293,8 +293,20 @@
       refreshStatus();
     }).catch(function (err) {
       console.error("Finger camera error:", err);
-      setCamStatus("off");
-      setStatus("⚠️ Webcam unavailable - using KEYBOARD controls  |  P = Pause  |  R = Restart", true);
+      var msg = "⚠️ Webcam unavailable - using KEYBOARD controls  |  P = Pause  |  R = Restart";
+      if (err && err.code === "NO_MEDIA") {
+        msg = "⚠️ Camera is blocked - this page must be opened over HTTPS (not file:// or plain http)  |  using KEYBOARD controls";
+      } else if (err && err.code === "MODEL") {
+        msg = "⚠️ AI hand-tracker couldn't load (check internet, or a firewall/blocker is stopping the CDN)  |  using KEYBOARD controls";
+      } else if (err && (err.name === "NotAllowedError" || err.name === "SecurityError" || err.name === "PermissionDeniedError")) {
+        msg = "⚠️ Camera permission DENIED - click the camera icon in the address bar and allow it, then choose FINGER again  |  using KEYBOARD controls";
+      } else if (err && (err.name === "NotFoundError" || err.name === "DevicesNotFoundError" || err.name === "OverconstrainedError")) {
+        msg = "⚠️ No webcam found - connect/plug in a camera and choose FINGER again  |  using KEYBOARD controls";
+      } else if (err && (err.name === "NotReadableError" || err.name === "TrackStartError")) {
+        msg = "⚠️ Webcam is busy in another app - close it, refresh, and choose FINGER again  |  using KEYBOARD controls";
+      }
+      setCamStatus("error: " + (err && (err.code || err.name) ? (err.code || err.name) : "unknown"));
+      setStatus(msg, true);
       els.cameraBox.classList.add("hidden");
     });
   }

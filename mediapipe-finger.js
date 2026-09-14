@@ -27,10 +27,20 @@
   var WASM_PATH = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm";
   var MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
+  function mediaError(message, code) {
+    var err = new Error(message);
+    err.code = code;
+    return err;
+  }
+
   /*
    * Start the webcam + hand tracking.
    * opts: { video, overlay, detector, onStatus }
    * Resolves with { stop: function } once running.
+   * Rejects with an Error whose .code is one of:
+   *   "NO_MEDIA" - browser blocks camera (needs HTTPS)
+   *   "MODEL"    - MediaPipe CDN / hand model could not load
+   *   name from DOMException otherwise (NotAllowedError, NotFoundError, ...)
    */
   async function startFingerCamera(opts) {
     var video = opts.video;
@@ -38,13 +48,31 @@
     var detector = opts.detector;
     var onStatus = opts.onStatus || function () {};
 
-    if (typeof MediaPipe === "undefined" || !MediaPipe.FilesetResolver) {
-      throw new Error("MediaPipe failed to load from the CDN. Check your internet and refresh.");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw mediaError("Camera requires a secure (HTTPS) connection.", "NO_MEDIA");
     }
 
-    var fileset = await MediaPipe.FilesetResolver.forVisionTasks(WASM_PATH);
+    // ask for the camera FIRST (this is what shows the permission prompt),
+    // then load the AI model, so a denied/missing camera fails fast.
+    var stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+      audio: false
+    });
+    video.srcObject = stream;
+    await video.play();
 
-    var landmarker = null;
+    var fileset = null, landmarker = null;
+    try {
+      if (typeof MediaPipe === "undefined" || !MediaPipe.FilesetResolver) {
+        throw mediaError("MediaPipe did not load from the CDN.", "MODEL");
+      }
+      fileset = await MediaPipe.FilesetResolver.forVisionTasks(WASM_PATH);
+    } catch (err) {
+      stopStreamTracks(stream, video);
+      if (err && err.code === "MODEL") throw err;
+      throw mediaError("Could not load MediaPipe files: " + err.message, "MODEL");
+    }
+
     try {
       landmarker = await MediaPipe.HandLandmarker.createFromOptions(fileset, {
         baseOptions: {
@@ -58,21 +86,25 @@
       });
     } catch (err) {
       // some browsers/devices do not support the GPU delegate
-      landmarker = await MediaPipe.HandLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: MODEL_URL, delegate: "CPU" },
-        runningMode: "VIDEO",
-        numHands: 1,
-        minHandDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
+      try {
+        landmarker = await MediaPipe.HandLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: MODEL_URL, delegate: "CPU" },
+          runningMode: "VIDEO",
+          numHands: 1,
+          minHandDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+      } catch (err2) {
+        stopStreamTracks(stream, video);
+        throw mediaError("Hand-tracking model failed to load: " + err2.message, "MODEL");
+      }
     }
 
-    var stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
-      audio: false
-    });
-    video.srcObject = stream;
-    await video.play();
+    function stopStreamTracks(stream, video) {
+      var tracks = stream.getTracks();
+      for (var i = 0; i < tracks.length; i++) tracks[i].stop();
+      video.srcObject = null;
+    }
 
     var ctx = overlay.getContext("2d");
     var rafId = null;
