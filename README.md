@@ -98,5 +98,6 @@ stem-controller/
   page, and re-allow permissions. The keyboard always works as a fallback.
 - To tune finger sensitivity, edit the constants at the top of
   `finger-control.js`: `threshold`, `cooldown`, `smoothing`.
-- The MediaPipe hand model is loaded from Google's CDN; it needs internet
-  access once when the game first loads.
+- The MediaPipe hand model, WASM runtime, and vision JS are **self-hosted**
+  in this repo (`vendor/`, `models/`), so finger control works even when
+  Google/jsDelivr CDNs are blocked on your network.

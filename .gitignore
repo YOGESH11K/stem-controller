@@ -1,6 +1,6 @@
 .vercel
 node_modules
-*.task
+python-game/*.task
 __pycache__/
 highscore.txt
 .webcache

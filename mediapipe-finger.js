@@ -24,8 +24,10 @@
 
   var ARROWS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
-  var WASM_PATH = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm";
-  var MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+  // all hand-tracking assets are self-hosted in this repo so the feature
+  // works even when Google / jsDelivr CDNs are blocked on the network
+  var WASM_PATH = "vendor/wasm";
+  var MODEL_URL = "models/hand_landmarker.task";
 
   function mediaError(message, code) {
     var err = new Error(message);
