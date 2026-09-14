@@ -42,6 +42,8 @@
     newHigh: $("new-high"),
     cameraBox: $("camera-box"),
     camState: $("cam-state"),
+    camFlipX: $("btn-flip-x"),
+    camFlipY: $("btn-flip-y"),
     video: $("video"),
     camOverlay: $("cam-overlay")
   };
@@ -57,6 +59,23 @@
   var timerId = null;
   var currentSpeed = SPEEDS.slow;
   var fingerTimerId = null;
+  var flipX = true;
+  var flipY = false;
+
+  function syncFlipButtons() {
+    els.camFlipX.classList.toggle("active", flipX);
+    els.camFlipY.classList.toggle("active", flipY);
+  }
+  function toggleFlipX() {
+    flipX = !flipX;
+    syncFlipButtons();
+    if (camera) camera.setFlips(flipX, flipY);
+  }
+  function toggleFlipY() {
+    flipY = !flipY;
+    syncFlipButtons();
+    if (camera) camera.setFlips(flipX, flipY);
+  }
   var messageTimer = null;
   var bannerTimer = null;
   var detector = null;
@@ -275,6 +294,7 @@
   function startFingerControl() {
     detector = new window.FingerDirectionDetector();
     els.cameraBox.classList.remove("hidden");
+    syncFlipButtons();
     setCamStatus("starting camera…");
     setStatus("✋ Starting webcam hand tracking…");
 
@@ -282,6 +302,8 @@
       video: els.video,
       overlay: els.camOverlay,
       detector: detector,
+      flipX: flipX,
+      flipY: flipY,
       onStatus: function (s) {
         camStatus = s;
         refreshStatus();
@@ -406,6 +428,8 @@
   els.btnBack.addEventListener("click", function () { showScreen("start"); });
   els.btnAgain.addEventListener("click", startGame);
   els.btnMenu.addEventListener("click", goToMenu);
+  els.camFlipX.addEventListener("click", toggleFlipX);
+  els.camFlipY.addEventListener("click", toggleFlipY);
 
   loadHighScore();
   updateScores();

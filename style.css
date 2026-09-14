@@ -167,5 +167,23 @@ h1 {
   width: 100%;
   display: block;
 }
-.cam-stage video { transform: scaleX(-1); }   /* mirror view */
-.cam-overlay { position: absolute; inset: 0; transform: scaleX(-1); }
+.cam-overlay { position: absolute; inset: 0; }
+
+.cam-flicks {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.chip {
+  font: inherit;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffd166;
+  background: transparent;
+  border: 1px solid #ffd166;
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.chip.active { background: #ffd166; color: #1b2a4a; }
+.chip:not(.active):hover { background: rgba(255, 209, 102, 0.15); }

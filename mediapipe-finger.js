@@ -55,6 +55,20 @@ import { FilesetResolver, HandLandmarker } from "./vendor/vision_bundle.js";
     var detector = opts.detector;
     var onStatus = opts.onStatus || function () {};
 
+    // a selfie (front) camera is a mirror image, so steer using what the
+    // user SEES on screen: flip L/R by default, U/D is available too.
+    var flips = { x: !!opts.flipX, y: !!opts.flipY };
+
+    function applyVideoMirror() {
+      var t = "";
+      if (flips.x) t += " scaleX(-1)";
+      if (flips.y) t += " scaleY(-1)";
+      video.style.transform = t.trim();
+    }
+    function mapX(x01) { return flips.x ? CAM_SPACE_W - x01 * CAM_SPACE_W : x01 * CAM_SPACE_W; }
+    function mapY(y01) { return flips.y ? CAM_SPACE_H - y01 * CAM_SPACE_H : y01 * CAM_SPACE_H; }
+    applyVideoMirror();
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw mediaError("Camera requires a secure (HTTPS) connection.", "NO_MEDIA");
     }
@@ -123,7 +137,7 @@ import { FilesetResolver, HandLandmarker } from "./vendor/vision_bundle.js";
 
       if (landmarks) {
         var tip = landmarks[INDEX_TIP];
-        detector.update(tip.x * CAM_SPACE_W, tip.y * CAM_SPACE_H);
+        detector.update(mapX(tip.x), mapY(tip.y));
         detector.handSeen = true;
         drawPreview(landmarks);
         if (!lastHand) { lastHand = true; onStatus("detected"); }
@@ -146,7 +160,7 @@ import { FilesetResolver, HandLandmarker } from "./vendor/vision_bundle.js";
       var hand = detector.handSeen;
       if (landmarks) {
         var pts = landmarks.map(function (lm) {
-          return { x: lm.x * w, y: lm.y * h };
+          return { x: mapX(lm.x) / CAM_SPACE_W * w, y: mapY(lm.y) / CAM_SPACE_H * h };
         });
         ctx.strokeStyle = "rgba(255,200,80,0.95)";
         ctx.lineWidth = 2;
@@ -211,7 +225,14 @@ import { FilesetResolver, HandLandmarker } from "./vendor/vision_bundle.js";
     sizeOverlay();
     rafId = requestAnimationFrame(loop);
     onStatus("starting");
-    return { stop: stop };
+    return {
+      stop: stop,
+      setFlips: function (x, y) {
+        flips.x = !!x;
+        flips.y = !!y;
+        applyVideoMirror();
+      }
+    };
   }
 
   window.startFingerCamera = startFingerCamera;
