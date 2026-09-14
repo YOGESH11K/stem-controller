@@ -1,16 +1,18 @@
 /*
- * FINGER CONTROL - BROWSER CAMERA WRAPPER
+ * FINGER CONTROL - BROWSER CAMERA WRAPPER  (ES MODULE)
  * ------------------------------------------------------------------
- * Uses MediaPipe Tasks Vision (HandLandmarker) in the browser to find
- * the index fingertip on every camera frame, then feeds the position
- * into the pure FingerDirectionDetector which produces snake
- * directions. Also draws a small, optional camera preview.
+ * Imports MediaPipe Tasks Vision HandLandmarker directly from the
+ * self-hosted ESM bundle.  Finds the index fingertip on every camera
+ * frame, feeds the position into the pure FingerDirectionDetector,
+ * and draws a small camera preview.
  */
+import { FilesetResolver, HandLandmarker } from "./vendor/vision_bundle.js";
+
 (function () {
   "use strict";
 
   var INDEX_TIP = 8;
-  var CAM_SPACE_W = 640;   // fixed coordinate space for consistent thresholds
+  var CAM_SPACE_W = 640;
   var CAM_SPACE_H = 480;
 
   var CONNECTIONS = [
@@ -24,8 +26,6 @@
 
   var ARROWS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
-  // all hand-tracking assets are self-hosted in this repo so the feature
-  // works even when Google / jsDelivr CDNs are blocked on the network
   var WASM_PATH = "vendor/wasm";
   var MODEL_URL = "models/hand_landmarker.task";
 
@@ -35,14 +35,19 @@
     return err;
   }
 
+  function stopStreamTracks(stream, video) {
+    var tracks = stream.getTracks();
+    for (var i = 0; i < tracks.length; i++) tracks[i].stop();
+    video.srcObject = null;
+  }
+
   /*
-   * Start the webcam + hand tracking.
    * opts: { video, overlay, detector, onStatus }
    * Resolves with { stop: function } once running.
-   * Rejects with an Error whose .code is one of:
+   * Rejects with an Error whose .code is:
    *   "NO_MEDIA" - browser blocks camera (needs HTTPS)
-   *   "MODEL"    - MediaPipe CDN / hand model could not load
-   *   name from DOMException otherwise (NotAllowedError, NotFoundError, ...)
+   *   "MODEL"    - hand model / WASM could not load
+   *   or a DOMException name (NotAllowedError, NotFoundError, …)
    */
   async function startFingerCamera(opts) {
     var video = opts.video;
@@ -54,8 +59,6 @@
       throw mediaError("Camera requires a secure (HTTPS) connection.", "NO_MEDIA");
     }
 
-    // ask for the camera FIRST (this is what shows the permission prompt),
-    // then load the AI model, so a denied/missing camera fails fast.
     var stream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
       audio: false
@@ -65,31 +68,23 @@
 
     var fileset = null, landmarker = null;
     try {
-      if (typeof MediaPipe === "undefined" || !MediaPipe.FilesetResolver) {
-        throw mediaError("MediaPipe did not load from the CDN.", "MODEL");
-      }
-      fileset = await MediaPipe.FilesetResolver.forVisionTasks(WASM_PATH);
+      fileset = await FilesetResolver.forVisionTasks(WASM_PATH);
     } catch (err) {
       stopStreamTracks(stream, video);
-      if (err && err.code === "MODEL") throw err;
-      throw mediaError("Could not load MediaPipe files: " + err.message, "MODEL");
+      throw mediaError("Could not load MediaPipe WASM: " + err.message, "MODEL");
     }
 
     try {
-      landmarker = await MediaPipe.HandLandmarker.createFromOptions(fileset, {
-        baseOptions: {
-          modelAssetPath: MODEL_URL,
-          delegate: "GPU"
-        },
+      landmarker = await HandLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
         runningMode: "VIDEO",
         numHands: 1,
         minHandDetectionConfidence: 0.5,
         minTrackingConfidence: 0.5
       });
     } catch (err) {
-      // some browsers/devices do not support the GPU delegate
       try {
-        landmarker = await MediaPipe.HandLandmarker.createFromOptions(fileset, {
+        landmarker = await HandLandmarker.createFromOptions(fileset, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: "CPU" },
           runningMode: "VIDEO",
           numHands: 1,
@@ -100,12 +95,6 @@
         stopStreamTracks(stream, video);
         throw mediaError("Hand-tracking model failed to load: " + err2.message, "MODEL");
       }
-    }
-
-    function stopStreamTracks(stream, video) {
-      var tracks = stream.getTracks();
-      for (var i = 0; i < tracks.length; i++) tracks[i].stop();
-      video.srcObject = null;
     }
 
     var ctx = overlay.getContext("2d");
@@ -119,7 +108,7 @@
     }
 
     function loop(now) {
-      if (lastTs === -1 || now > lastTs) lastTs = now; // keep timestamps increasing
+      if (lastTs === -1 || now > lastTs) lastTs = now;
       var result;
       try {
         result = landmarker.detectForVideo(video, lastTs);
@@ -225,9 +214,5 @@
     return { stop: stop };
   }
 
-  if (typeof module !== "undefined" && module.exports) {
-    module.exports = { startFingerCamera: startFingerCamera };
-  } else {
-    window.startFingerCamera = startFingerCamera;
-  }
+  window.startFingerCamera = startFingerCamera;
 })();
