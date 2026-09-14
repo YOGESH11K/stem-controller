@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐍 Snake &amp; Apple - Play with Keyboard or Finger</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ==================== START SCREEN ==================== -->
+  <section id="start-screen" class="screen active">
+    <div class="panel">
+      <div class="emoji">🐍🍎</div>
+      <h1>SNAKE &amp; APPLE</h1>
+      <p class="tagline">Can you eat all the apples?</p>
+
+      <div class="control-choice">
+        <p class="section-title">🎮 Choose Control:</p>
+        <div class="row center">
+          <button id="btn-keyboard" class="chip selected">⌨️ KEYBOARD</button>
+          <button id="btn-finger" class="chip">✋ FINGER</button>
+        </div>
+        <p id="ctl-label" class="control-label">Control: ⌨️ KEYBOARD</p>
+        <p class="tip">✋ FINGER mode: move your <b>index finger</b> up / down / left / right in front of your webcam to steer the snake.</p>
+      </div>
+
+      <button id="btn-start" class="btn btn-green">▶ START GAME</button>
+      <button id="btn-howto" class="btn btn-blue">❓ HOW TO PLAY</button>
+      <p class="hint">Press SPACE to start · press F or K to choose a control</p>
+    </div>
+  </section>
+
+  <!-- ==================== HOW TO PLAY ==================== -->
+  <section id="howto-screen" class="screen">
+    <div class="panel">
+      <h1>HOW TO PLAY</h1>
+      <ul class="rules">
+        <li>🐍 Move the snake using the <b>Arrow Keys</b>.</li>
+        <li>✋ Or choose <b>FINGER</b> control and move your index finger in front of the webcam.</li>
+        <li class="small">Move it up / down / left / right to steer the snake.</li>
+        <li>🍎 Eat the apples to increase your score.</li>
+        <li>📈 Your snake grows when it eats an apple.</li>
+        <li>💥 Do not hit the walls.</li>
+        <li>💥 Do not hit your own body.</li>
+        <li>⌨️ Keyboard always works, even in FINGER mode.</li>
+        <li>⏸️ Press <b>P</b> to pause.</li>
+        <li>🔄 Press <b>R</b> to restart.</li>
+      </ul>
+      <p class="tagline">Try to get the highest score!</p>
+      <button id="btn-back" class="btn btn-orange">← BACK</button>
+    </div>
+  </section>
+
+  <!-- ==================== GAME SCREEN ==================== -->
+  <section id="game-screen" class="screen">
+    <div class="panel">
+      <h1>🐍 SNAKE &amp; APPLE 🍎</h1>
+      <div class="scores">
+        <span id="score-label">Score: 0</span>
+        <span id="high-label">🏆 High Score: 0</span>
+        <span id="level-label">Level: Easy</span>
+      </div>
+
+      <div class="stage">
+        <canvas id="board" width="600" height="400"></canvas>
+
+        <div id="pause-overlay" class="overlay hidden">⏸️ GAME PAUSED</div>
+
+        <div id="gameover-modal" class="overlay hidden">
+          <h2 class="go-title">GAME OVER!</h2>
+          <p id="final-score" class="go-score">Your Score: 0</p>
+          <p id="new-high" class="go-high hidden">🏆 NEW HIGH SCORE! 🏆</p>
+          <div class="row center">
+            <button id="btn-again" class="btn btn-green">🔄 PLAY AGAIN</button>
+            <button id="btn-menu" class="btn btn-red">🏠 MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <p id="status" class="status">Use Arrow Keys to Move &nbsp;|&nbsp; P = Pause &nbsp;|&nbsp; R = Restart &nbsp;|&nbsp; Esc = Menu</p>
+
+      <div id="camera-box" class="camera-box hidden">
+        <div class="cam-title">👁 Finger Camera <span id="cam-state"></span></div>
+        <div class="cam-stage">
+          <video id="video" playsinline muted></video>
+          <canvas id="cam-overlay" class="cam-overlay"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0"></script>
+<script src="game-logic.js"></script>
+<script src="finger-control.js"></script>
+<script src="mediapipe-finger.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

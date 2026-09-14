@@ -1,0 +1,7 @@
+.vercel
+node_modules
+*.task
+__pycache__/
+highscore.txt
+.webcache
+.env
